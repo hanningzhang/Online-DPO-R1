@@ -83,7 +83,7 @@ class ScriptArguments:
         metadata={"help": "the maximum length of the input tokens"},
     )
     max_new_tokens: Optional[int] = field(
-        default=2048,
+        default=4096,
         metadata={"help": "the maximum length of the new tokens"},
     )
     seed: Optional[int] = field(

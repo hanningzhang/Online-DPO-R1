@@ -61,7 +61,7 @@ train_dir: $model_output
 eval_dir: $model_output
 loss_type: sigmoid
 lr_scheduler_type: cosine
-max_length: 2048
+max_length: 4096
 max_prompt_length: 1000
 eval_strategy: steps
 bf16: true
