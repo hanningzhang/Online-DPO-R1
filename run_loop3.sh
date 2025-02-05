@@ -43,7 +43,7 @@ CUDA_VISIBLE_DEVICES=7 python ./generation/gen_hf2.py --model_name_or_path ${inf
     wait
     python ./generation/merge_data.py --base_path ${output_dir} --output_dir "${output_dir}_data.jsonl" --num_datasets 8
     python test_qwen_extract_ace.py --dataset_name_or_path "${output_dir}_data.jsonl" --output_dir $model_output
-    conda activate rlhflow2
+    conda activate rlhflow
     cat <<EOT > dpo_config.yaml
 run_name: $iteration
 output_dir: $iteration
