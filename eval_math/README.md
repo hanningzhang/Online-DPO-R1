@@ -6,7 +6,7 @@ pip install -e .
 cd ..
 pip install vllm==0.5.1 --no-build-isolation
 pip install -r requirements.txt 
-pip install transformers==4.42.3
+pip install transformers==4.45.0
 ```
 
 ### Evaluation
