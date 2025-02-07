@@ -4,8 +4,8 @@ You can install the required packages with the following command:
 cd latex2sympy
 pip install -e .
 cd ..
-pip install -r requirements.txt 
 pip install vllm==0.5.1 --no-build-isolation
+pip install -r requirements.txt 
 pip install transformers==4.42.3
 ```
 
@@ -19,39 +19,6 @@ PROMPT_TYPE="qwen25-math-cot"
 export CUDA_VISIBLE_DEVICES="0"
 MODEL_NAME_OR_PATH="Qwen/Qwen2.5-Math-1.5B-Instruct"
 OUTPUT_DIR="Qwen2.5-Math-1.5B-Instruct-Math-Eval"
-bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
-
-# Qwen2.5-Math-7B-Instruct
-export CUDA_VISIBLE_DEVICES="0"
-MODEL_NAME_OR_PATH="Qwen/Qwen2.5-Math-7B-Instruct"
-OUTPUT_DIR="Qwen2.5-Math-7B-Instruct-Math-Eval"
-bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
-
-# Qwen2.5-Math-72B-Instruct
-export CUDA_VISIBLE_DEVICES="0,1,2,3"
-MODEL_NAME_OR_PATH="Qwen/Qwen2.5-Math-72B-Instruct"
-OUTPUT_DIR="Qwen2.5-Math-72B-Instruct-Math-Eval"
-bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
-
-
-# Qwen2-Math-Instruct Series
-PROMPT_TYPE="qwen-boxed"
-# Qwen2-Math-1.5B-Instruct
-export CUDA_VISIBLE_DEVICES="0"
-MODEL_NAME_OR_PATH="Qwen/Qwen2-Math-1.5B-Instruct"
-OUTPUT_DIR="Qwen2-Math-1.5B-Instruct-Math-Eval"
-bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
-
-# Qwen2-Math-7B-Instruct
-export CUDA_VISIBLE_DEVICES="0"
-MODEL_NAME_OR_PATH="Qwen/Qwen2-Math-7B-Instruct"
-OUTPUT_DIR="Qwen2-Math-7B-Instruct-Math-Eval"
-bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
-
-# Qwen2-Math-72B-Instruct
-export CUDA_VISIBLE_DEVICES="0,1,2,3"
-MODEL_NAME_OR_PATH="Qwen/Qwen2-Math-72B-Instruct"
-OUTPUT_DIR="Qwen2-Math-72B-Instruct-Math-Eval"
 bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
 ```
 
