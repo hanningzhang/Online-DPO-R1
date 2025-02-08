@@ -145,7 +145,7 @@ ds = concatenate_datasets(datasets)
 ds = ds.map(
     lambda x: {
         "prompt": tokenizer.apply_chat_template(
-            [{"role":"user","content":x[script_args.dataset_key]}], 
+            [{"role":"user","content":x[script_args.dataset_key] + f' Let\'s think step by step and output the final answer within \\boxed{{}}'}], 
             tokenize=False, add_generation_prompt=True)
     }
 )
