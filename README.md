@@ -1,8 +1,9 @@
 # Online-DPO-R1
 
+This is the repository for running the Iterative DPO with rule-based rewards. In every iteration, we sample responses from the model and label the rewards using the rule-based method. We then construct the preference pair based on the reward scores for DPO training.
 ## Requirements
 
-We have two separate environments for running the iterative DPO.
+We have two separate environments for running the Iterative DPO.
 
 ### Generation
 ```sh
