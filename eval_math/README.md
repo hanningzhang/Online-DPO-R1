@@ -1,8 +1,8 @@
 ### Requirements
 You can install the required packages with the following command:
 ```bash
-conda create -n eval python=3.10.9
-conda activate eval
+conda create -n math_eval python=3.10.9
+conda activate math_eval
 cd latex2sympy
 pip install -e .
 cd ..
