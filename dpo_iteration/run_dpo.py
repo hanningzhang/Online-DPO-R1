@@ -136,7 +136,8 @@ def prepare_data(
 
     margin = []
     for sample in ds:
-        P = tokenizer.apply_chat_template(sample["prompt"], tokenize = False, add_generation_prompt= True)
+        #P = tokenizer.apply_chat_template(sample["prompt"], tokenize = False, add_generation_prompt= True)
+        P = sample["prompt"]
         if choose_type == "random":
             idx0 = 0
             idx1 = 1
