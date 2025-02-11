@@ -1,53 +1,89 @@
-import json
+#!/usr/bin/env python
 from dataclasses import dataclass, field
 from typing import List, Optional
-from datasets import load_dataset
-from tqdm import tqdm
-from transformers import AutoTokenizer, HfArgumentParser
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import requests
+import numpy as np
+import torch
+from datasets import load_dataset, get_dataset_config_names, concatenate_datasets
+from transformers import (
+    AutoTokenizer,
+    HfArgumentParser,
+)
+from vllm import LLM, SamplingParams
+import json
 
-tqdm.pandas()
 
+def last_boxed_only_string(string):
+    idx = string.rfind("\\boxed")
+    if idx < 0:
+        idx = string.rfind("\\fbox")
+        if idx < 0:
+            return None
 
+    i = idx
+    right_brace_idx = None
+    num_left_braces_open = 0
+    while i < len(string):
+        if string[i] == "{":
+            num_left_braces_open += 1
+        if string[i] == "}":
+            num_left_braces_open -= 1
+            if num_left_braces_open == 0:
+                right_brace_idx = i
+                break
+        i += 1
+    
+    if right_brace_idx == None:
+        retval = None
+    else:
+        retval = string[idx:right_brace_idx + 1]
+    
+    return retval
+
+def remove_boxed(s):
+    left = "\\boxed{"
+    try:
+        assert s[:len(left)] == left
+        assert s[-1] == "}"
+        return s[len(left):-1]
+    except:
+        return None
+    
 @dataclass
 class ScriptArguments:
     """
     The arguments for the DPO training script.
     """
 
-    url: Optional[str] = field(
-        default="http://localhost",
-        metadata={"help": "url of the model response"},
+    model_name_or_path: Optional[str] = field(
+        default="your model",
+        metadata={"help": "the location of the SFT model name or path"},
     )
-    tokenizer: Optional[str] = field(
-        default="HuggingFaceH4/mistral-7b-sft-beta",
-        metadata={"help": "the tokenizer to use"},
-    )
-    ports: List[str] = field(default_factory=lambda: ["8000"], metadata={"help": "ports of the model response"})
-    eos_ids: List[int] = field(default_factory=lambda: [], metadata={"help": "the ids of the end of sentence tokens"})
     dataset_name_or_path: Optional[str] = field(
-        default="cornfieldrm/iterative-prompt-v1-iter1-2K",
+        default="hendrycks/competition_math",
         metadata={"help": "the location of the dataset name or path"},
     )
+    local_index: Optional[int] = field(
+        default=999,
+        metadata={"help": "the local index of the agent"},
+    )
     output_dir: Optional[str] = field(
-        default="uf_split0_responses_K8.jsonl",
+        default="",
         metadata={"help": "the location of the output file"},
     )
-    bos_format: Optional[str] = field(
-        default="",
-        metadata={"help": "the format of the beginning of the sentence"},
+    my_world_size: Optional[int] = field(
+        default=4,
+        metadata={"help": "the total number of the agents"},
     )
     K: Optional[int] = field(
         default=8,
         metadata={"help": "the number of generations per prompt"},
     )
     max_input_length: Optional[int] = field(
-        default=10000,
+        default=8192,
         metadata={"help": "the maximum length of the input tokens"},
     )
     max_new_tokens: Optional[int] = field(
-        default=2048,
+        default=4096,
         metadata={"help": "the maximum length of the new tokens"},
     )
     seed: Optional[int] = field(
@@ -63,80 +99,85 @@ class ScriptArguments:
         metadata={"help": "the beam search"},
     )
     dataset_key: Optional[str] = field(
-        default="context_messages",
+        default="problem",
         metadata={"help": "the key of the dataset"},
     )
-    max_workers: Optional[int] = field(
-        default=1024,
-        metadata={"help": "the number of workers"},
-    )
+    eos_ids: List[int] = field(default_factory=lambda: [], metadata={"help": "the ids of the end of sentence tokens"})
 
 
 parser = HfArgumentParser(ScriptArguments)
 script_args = parser.parse_args_into_dataclasses()[0]
-ds_dir = script_args.dataset_name_or_path
-output_dir = script_args.output_dir
-K = script_args.K
-ports = script_args.ports
 
-tokenizer = AutoTokenizer.from_pretrained(script_args.tokenizer)
+model_path = script_args.model_name_or_path
+print("model_path", model_path)
+seed = script_args.seed
+# set seed
+torch.manual_seed(seed)
+np.random.seed(seed)
 
+llm = LLM(
+    model=model_path,
+    tokenizer=model_path,
+    dtype="bfloat16",
+    #max_model_len=script_args.max_input_length,
+    load_format="auto",
+    seed=42,
+)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-def query_model(prompt, args, port):
-    json = {
-        **args,
-        "prompt": prompt,
-    }
-    response = requests.post(url=script_args.url + ":" + str(port) + "/generate", json=json)
-    response_json = response.json()
-    return [response_json["text"][i][len(prompt) :] for i in range(len(response_json["text"]))]
-
-
-default_args = {
-    "use_beam_search": script_args.use_beam_search,
-    "n": script_args.K,
-    "temperature": script_args.temperature,
-    "max_tokens": script_args.max_new_tokens,
-    "seed": script_args.seed,
-    "top_p": 1.0,
-    "top_k": -1,
-    "stop_token_ids": [tokenizer.eos_token_id] + script_args.eos_ids,
-}
-
-print(default_args)
-
-ds = load_dataset(ds_dir, split="train")
-# load_dataset("json", data_files=ds_dir, split="train", field="instances")
-print(ds)
-
-# use tokenizer.apply_template to apply the template to the prompt
-ds = ds.map(
-    lambda x: {
-        "prompt": tokenizer.apply_chat_template(x[script_args.dataset_key], tokenize=False, add_generation_prompt=True)
-    }
+sampling_params = SamplingParams(
+    temperature=script_args.temperature,
+    top_p=1.0,
+    max_tokens=script_args.max_new_tokens,
+    n=script_args.K,
+    stop_token_ids=[tokenizer.eos_token_id] + script_args.eos_ids,
+    #stop=["<|user|>"],
 )
 
 
-with ThreadPoolExecutor(max_workers=script_args.max_workers) as executor:
-    result = [
-        executor.submit(query_model, ds[i]["prompt"], default_args, ports[i % len(ports)]) for i in range(len(ds))
-    ]
-    # use tqdm to show progress
-    for _ in tqdm(as_completed(result), total=len(result)):
-        pass
+ds = load_dataset(script_args.dataset_name_or_path, split="train")
 
-    responses = [r.result() for r in result]
+# ## loading for MATH training set
+# configs = get_dataset_config_names(script_args.dataset_name_or_path)
+# datasets = [load_dataset(script_args.dataset_name_or_path, config, split='train') for config in configs]
+# ds = concatenate_datasets(datasets)
+
+ds = ds.remove_columns(["prompt"])
+
+ds = ds.map(
+    lambda x: {
+        "prompt": tokenizer.apply_chat_template(
+            [{"role":"user","content":x[script_args.dataset_key] + f' Let\'s think step by step and output the final answer within \\boxed{{}}'}], 
+            tokenize=False, add_generation_prompt=True)
+    }
+)
+
+data_size = len(ds["prompt"])
+one_num_share = int(data_size / script_args.my_world_size)
+ds = ds.select(np.arange(script_args.local_index * one_num_share, (script_args.local_index + 1) * one_num_share))
+
+print([script_args.local_index * one_num_share, (script_args.local_index + 1) * one_num_share])
+print(ds, script_args.dataset_name_or_path)
+print(ds[0])
 
 
+prompts = ds["prompt"]
+outputs = llm.generate(prompts, sampling_params=sampling_params, use_tqdm=True)
+
+
+completions = []
+used_prompts = []
 gathered_data = []
-for i in range(len(ds)):
-    tmp_data = {"prompt": ds[i][script_args.dataset_key], "responses": responses[i]}
+for i, output in enumerate(outputs):
+    #tmp_data = {"prompt": ds[i]['prompt'], "responses": [out.text for out in output.outputs], "gt":remove_boxed(last_boxed_only_string(ds[i]['solution']))}
+    tmp_data = {"prompt": ds[i]['prompt'], "responses": [out.text for out in output.outputs], "gt":ds[i]['reward_model']['ground_truth']}
     gathered_data.append(tmp_data)
+
 
 print("I collect ", len(gathered_data), "samples")
 
 
-with open(output_dir, 'w', encoding='utf8') as f:
+with open(script_args.output_dir + str(script_args.local_index) + ".json", "w", encoding="utf8") as f:
     for i in range(len(gathered_data)):
         json.dump(gathered_data[i], f, ensure_ascii=False)
         f.write('\n')
