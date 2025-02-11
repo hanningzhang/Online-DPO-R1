@@ -18,7 +18,7 @@ You can evaluate Qwen2.5/Qwen2-Math-Instruct series model with the following com
 PROMPT_TYPE="qwen25-math-cot"
 
 # Qwen2.5-Math-1.5B-Instruct
-export CUDA_VISIBLE_DEVICES="0"
+export CUDA_VISIBLE_DEVICES=0
 MODEL_NAME_OR_PATH="Qwen/Qwen2.5-Math-1.5B-Instruct"
 OUTPUT_DIR="Qwen2.5-Math-1.5B-Instruct-Math-Eval"
 bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
