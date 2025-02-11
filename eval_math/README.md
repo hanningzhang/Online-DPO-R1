@@ -1,6 +1,8 @@
 ### Requirements
 You can install the required packages with the following command:
 ```bash
+conda create -n eval python=3.10.9
+conda activate eval
 cd latex2sympy
 pip install -e .
 cd ..
@@ -23,4 +25,4 @@ bash sh/eval.sh $PROMPT_TYPE $MODEL_NAME_OR_PATH $OUTPUT_DIR
 ```
 
 ## Acknowledgement
-The codebase is adapted from [math-evaluation-harness](https://github.com/ZubinGou/math-evaluation-harness).
+The evaluation codebase is borrowed from [simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason).
